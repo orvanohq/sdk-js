@@ -54,8 +54,8 @@ jobs:
         run: git diff --exit-code
 
   # Spec 0014 CNF-5, CNF-6, spec 0005 SQA-3: every scenario in Node, the Hermes profile, and Chromium, against
-  # Orvano and the stub from api/conformance/compose.yaml at the pinned commit. The server image is built from that
-  # commit here, because nothing publishes ghcr.io/orvanohq/orvano:sha-<commit> yet; switch to pulling it then.
+  # Orvano and the stub from api/conformance/compose.yaml at the pinned commit, using the published
+  # ghcr.io/orvanohq/orvano:sha-<pinned commit> image.
   conformance:
     name: conformance
     runs-on: ubuntu-24.04
@@ -78,13 +78,12 @@ jobs:
           key: orvano-${{ hashFiles('orvano-contract.json') }}
       - name: Fetch the pinned orvano commit
         run: pnpm regenerate
-      - name: Build the Orvano image at the pinned commit
-        run: docker build --file .orvano/deploy/Dockerfile --tag orvano:pinned .orvano
       - name: Start Orvano, PostgreSQL, and the stub
-        env:
-          ORVANO_IMAGE: orvano
-          ORVANO_IMAGE_TAG: pinned
-        run: docker compose --file .orvano/api/conformance/compose.yaml up --detach --wait
+        run: |
+          ORVANO_IMAGE_TAG="sha-$(jq -r .commit orvano-contract.json)"
+          export ORVANO_IMAGE_TAG
+          echo "ORVANO_IMAGE_TAG=$ORVANO_IMAGE_TAG" >> "$GITHUB_ENV"
+          docker compose --file .orvano/api/conformance/compose.yaml up --detach --wait
       - id: playwright
         name: Find the Playwright version
         run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
@@ -98,9 +97,6 @@ jobs:
         run: pnpm conformance
       - name: Server logs
         if: failure()
-        env:
-          ORVANO_IMAGE: orvano
-          ORVANO_IMAGE_TAG: pinned
         run: docker compose --file .orvano/api/conformance/compose.yaml logs --no-color
 
   ci-gate:
