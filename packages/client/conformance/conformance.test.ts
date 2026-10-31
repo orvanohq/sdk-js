@@ -21,6 +21,7 @@ const captured = (globalThis as unknown as Record<symbol, Servers["fetch"] | und
 const servers: Servers = {
   stubUrl: config.stubUrl,
   liveUrl: config.liveUrl,
+  project: inject("project"),
   fetch: captured ?? ((request) => globalThis.fetch(request)),
 };
 const ran = new Set<string>();

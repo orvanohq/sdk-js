@@ -13,6 +13,9 @@ const servers = {
   partial: process.env.ORVANO_CONFORMANCE_PARTIAL === "1",
 };
 const conformance = ["conformance/conformance.test.ts"];
+const globalSetup = ["conformance/bootstrap.ts"];
+// Spec 0014 CNF-7: the exact origin the server allows for browser mode (spec 0007 COR-2 has no wildcards).
+const browserPort = 63315;
 
 // Spec 0005 SQA-1 to SQA-4: unit tests in Node; the conformance suite in Node, the Hermes profile, and Chromium.
 const config: ViteUserConfig = defineConfig({
@@ -28,6 +31,7 @@ const config: ViteUserConfig = defineConfig({
         test: {
           name: "conformance-node",
           include: conformance,
+          globalSetup,
           provide: { conformance: { ...servers, runtime: "node" } },
         },
       },
@@ -37,6 +41,7 @@ const config: ViteUserConfig = defineConfig({
           name: "conformance-hermes",
           include: conformance,
           setupFiles: ["conformance/hermes.setup.ts"],
+          globalSetup,
           provide: { conformance: { ...servers, runtime: "hermes" } },
         },
       },
@@ -45,6 +50,8 @@ const config: ViteUserConfig = defineConfig({
         test: {
           name: "conformance-browser",
           include: conformance,
+          globalSetup,
+          api: { port: browserPort, strictPort: true },
           provide: { conformance: { ...servers, runtime: "chromium" } },
           browser: {
             enabled: true,
